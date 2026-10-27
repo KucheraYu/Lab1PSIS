@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Геометричні фігури — 2 клас</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-drag: none; }
+        body {
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            margin: 0; padding: 20px; min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
+            color: #2c3e50; overflow: hidden;
+        }
+        .top-bar {
+            background: white; padding: 15px 30px; border-radius: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1); width: 100%; max-width: 1480px;
+            margin-bottom: 20px; border: 4px solid #81c784;
+            display: grid; grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 1fr);
+            column-gap: 20px; align-items: center;
+        }
+        .level-title { font-size: 24px; font-weight: bold; color: #2e7d32; margin: 0; white-space: nowrap; }
+        .instruction {
+            font-size: 16px; color: #d84315; background: #fff3e0;
+            padding: 10px 25px; border-radius: 15px; border: 2px dashed #ffb74d; font-weight: bold;
+            grid-column: 2; text-align: center;
+        }
+        .main-layout { display: flex; gap: 20px; max-width: 1480px; width: 100%; }
+        .level-menu {
+            width: 210px; flex-shrink: 0; height: 650px; background: white;
+            border: 4px solid #ffb74d; border-radius: 25px; padding: 12px;
+            display: flex; flex-direction: column; gap: 8px; overflow-y: auto;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .level-menu h3 { margin: 0 0 4px 0; color: #ef6c00; font-size: 18px; text-align: center; }
+        .level-btn {
+            display: flex; align-items: center; justify-content: space-between; gap: 6px;
+            padding: 10px 12px; border: 3px solid #e0e0e0; border-radius: 14px;
+            background: #fafafa; color: #37474f; font-family: inherit; font-size: 15px; font-weight: bold;
+            text-align: left; cursor: pointer; transition: 0.2s;
+        }
+        .level-btn:hover { background: #fff3e0; border-color: #ffb74d; transform: translateX(3px); }
+        .level-btn.active { background: #fff3e0; border-color: #ff9800; box-shadow: 0 3px 8px rgba(255,152,0,0.35); }
+        .level-btn.done { border-color: #81c784; }
+        .level-btn.done.active { border-color: #2e7d32; }
+        .level-btn .lvl-status { font-size: 18px; min-width: 22px; text-align: center; }
+        .game-container {
+            position: relative; flex-grow: 1; background: rgba(255, 255, 255, 0.9);
+            border: 4px solid #4fc3f7; border-radius: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); height: 650px;
+        }
+        .reference-panel {
+            width: 250px; background: white; border: 4px solid #ab47bc; border-radius: 25px;
+            padding: 15px; display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .reference-panel h3 { margin: 0 0 10px 0; color: #8e24aa; font-size: 18px; }
+        .reference-image {
+            width: 100%; height: auto; border-radius: 10px; border: 2px dashed #ce93d8;
+            background: #f3e5f5; object-fit: contain; min-height: 150px;
+        }
+        .reference-svg {
+            width: 100%; height: 300px; border-radius: 10px; border: 2px dashed #ce93d8; background: #f3e5f5;
+        }
+        #gameBoard {
+            background: transparent; display: block; cursor: default;
+            touch-action: none; position: relative; z-index: 2; width: 100%; height: 100%;
+        }
+        .stick { stroke-width: 12; stroke-linecap: round; transition: stroke 0.2s; }
+        .stick-hitbox { stroke: transparent; stroke-width: 35; stroke-linecap: round; cursor: grab; }
+        .stick-hitbox:active { cursor: grabbing; }
+        .static-element { pointer-events: none; }
+        .cursor-rotate {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="%23333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>') 14 14, pointer !important;
+        }
+        .snap-point { fill: #4caf50; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        .snap-point.visible { opacity: 0.8; }
+        .snap-hint { fill: #9e9e9e; opacity: 0.35; pointer-events: none; }
+        .inventory-zone {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 95%; height: 140px; background: #e3f2fd;
+            border: 3px dashed #64b5f6; border-radius: 20px; pointer-events: none; z-index: 1;
+        }
+        .inventory-text {
+            position: absolute; bottom: 165px; left: 50%; transform: translateX(-50%);
+            color: #1976d2; font-weight: bold; font-size: 18px; pointer-events: none; z-index: 1;
+        }
+        .modal-overlay {
+            display: none; position: fixed; left: 0; right: 0; bottom: 0;
+            justify-content: center; padding: 0 20px 16px; z-index: 1000; pointer-events: none;
+        }
+        .modal-content {
+            pointer-events: auto; display: flex; align-items: center; gap: 28px;
+            background: white; padding: 14px 30px; border-radius: 25px; border: 6px solid #ffca28;
+            box-shadow: 0 -4px 25px rgba(0,0,0,0.3); max-width: 900px; animation: slideUp 0.4s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-content h2 { font-size: 26px; color: #2e7d32; margin: 0 0 4px 0; }
+        .modal-content p { font-size: 18px; color: #455a64; margin: 0; }
+        .next-btn {
+            padding: 12px 32px; font-size: 20px; background: #ff7043; color: white; border: none; white-space: nowrap;
+            border-radius: 15px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+        .next-btn:hover { background: #f4511e; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="level-title" id="levelTitle">Етап 1: Трикутник 🔺</div>
+        <div class="instruction">
+            Тягни за <b>середину</b> деталі, щоб перемістити.<br>
+            Тягни за <b>кінці</b> (іконка 🔄), щоб крутити!
+        </div>
+        <div id="sandboxControls" style="display: flex; grid-column: 3; justify-content: flex-end; gap: 10px;">
+            <button onclick="resetCurrentLevel()" style="padding: 10px 15px; background: #e53935; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px;">Скинути</button>
+            <button id="saveBtn" onclick="saveSandbox()" style="display: none; padding: 10px 15px; background: #03a9f4; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px;">Зберегти</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <nav class="level-menu" id="levelMenu"></nav>
+
+        <div class="game-container">
+            <div class="inventory-text">Візьми деталі звідси:</div>
+            <div class="inventory-zone"></div>
+            <svg id="gameBoard"></svg>
+        </div>
+
+        <div class="reference-panel">
+            <h3 id="panelTitle">Зразок:</h3>
+            <svg id="referenceSvg" class="reference-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+            <div id="savedContainer" style="display: none; width: 100%; height: 550px; overflow-y: auto; flex-direction: column; gap: 10px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-content">
+            <div>
+                <h2 id="modalTitle">Супер! 🎉</h2>
+                <p id="modalDesc">Усе зібрано правильно!</p>
+            </div>
+            <button class="next-btn" id="nextBtn" onclick="nextLevel()">Наступний етап ➔</button>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        const svg = document.getElementById('gameBoard');
+        let lines = [];
+        let staticElements = [];
+        let staticSnapPoints = [];
+        let currentLevel = 1;
+        let boardW = 900, boardH = 642;
+        let sun = null;                 
+        const SNAP_DISTANCE = 30;
+        const REACH = 20;               
+        const ATTACH = 20;              
+        const LEAF_LENGTHS = [40, 60, 80, 100, 120, 140];
+        const LEAF_MIN_ANGLE = 20, LEAF_MAX_ANGLE = 50;   
+        let dragState = null;
+        let levelDone = false;          
+        const progress = {};            // збережений прогрес кожного етапу (живе, поки відкрита сторінка)
+        const MENU_LEVELS = 7;          // етап 8 (творчість) відкривається лише вчителем — Shift+R
+
+        const levelsData = [
+            { id: 1, title: "Етап 1: Трикутник 🔺" },
+            { id: 2, title: "Етап 2: Квадрат 🟦" },
+            { id: 3, title: "Етап 3: Сонечко ☀️" },
+            { id: 4, title: "Етап 4: Листочок 🌿" },
+            { id: 5, title: "Етап 5: Квіточка 🌷" },
+            { id: 6, title: "Етап 6: Машинка 🚗" },
+            { id: 7, title: "Етап 7: Будиночок 🏠" },
+            { id: 8, title: "Етап 8: Творчість 🎨" }
+        ];
+
+        function idealFigure(levelId) {
+            const segs = [];
+            const L = (x1, y1, x2, y2, color, w = 12, stat = false) => segs.push({ k: 'line', x1, y1, x2, y2, color, w, stat });
+            const C = (x1, y1, x2, y2, r, sweep, color, ry) => segs.push({ k: 'curve', x1, y1, x2, y2, r, ry: ry || r, sweep, color, w: 12, stat: false });
+            const polar = (x, y, deg, len) => [x + len * Math.cos(deg * Math.PI / 180), y + len * Math.sin(deg * Math.PI / 180)];
+
+            if (levelId === 1) {
+                const c = '#ff9800', h = 150 * Math.sqrt(3) / 2;
+                L(0, 0, 150, 0, c); L(150, 0, 75, -h, c); L(75, -h, 0, 0, c);
+            } else if (levelId === 2) {
+                const c = '#ff9800';
+                L(0, 0, 150, 0, c); L(150, 0, 150, -150, c); L(150, -150, 0, -150, c); L(0, -150, 0, 0, c);
+            } else if (levelId === 3) {
+                segs.push({ k: 'circle', cx: 0, cy: 0, r: 60, color: '#fdd835', w: 14, stat: true });
+                for (let i = 0; i < 10; i++) {
+                    const a = -90 + i * 36, p = polar(0, 0, a, 60), q = polar(0, 0, a, 180);
+                    L(p[0], p[1], q[0], q[1], '#fdd835');
+                }
+            } else if (levelId === 4) {
+                const tx = 250, ty = 0, ex = 0, ey = 350, G = '#8bc34a';
+                L(tx, ty, ex, ey, G, 12, true);
+                const sa = Math.atan2(ty - ey, tx - ex) * 180 / Math.PI;       
+                const ang = (LEAF_MIN_ANGLE + LEAF_MAX_ANGLE) / 2;             
+                LEAF_LENGTHS.forEach((len, i) => {
+                    const t = 0.15 + i * 0.14, px = tx + (ex - tx) * t, py = ty + (ey - ty) * t;
+                    [ang, -ang].forEach(d => { const q = polar(px, py, sa + d, len); L(px, py, q[0], q[1], G); });
+                });
+            } else if (levelId === 5) {
+                const P = '#f06292', G = '#8bc34a';
+                const pink = lines.filter(l => l.color === P), green = lines.filter(l => l.color === G);
+                const bowl = pink.find(l => l.shape === 'curve');
+                const ls = pink.filter(l => l.shape === 'line').sort((a, b) => b.length - a.length);
+                const Ld = ls[0].length, Ll = ls[1].length, Lp1 = ls[2].length, Lp2 = ls[3].length;
+                const hW = bowl.length / 2, r = bowl.customR || hW;
+                const cen = [0, 190 - r], rimY = cen[1] + Math.sqrt(Math.max(0, r * r - hW * hW));
+                const A = [-hW, rimY], R = [hW, rimY];
+                const circ = (c0, r0, c1, r1) => {
+                    const dx = c1[0] - c0[0], dy = c1[1] - c0[1], d = Math.hypot(dx, dy);
+                    if (!d || d > r0 + r1 || d < Math.abs(r0 - r1)) return null;
+                    const a = (r0 * r0 - r1 * r1 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, r0 * r0 - a * a));
+                    const mx = c0[0] + a * dx / d, my = c0[1] + a * dy / d;
+                    return [[mx + h * dy / d, my - h * dx / d], [mx - h * dy / d, my + h * dx / d]];
+                };
+                L(0, 190, 0, 460, '#4caf50', 10, true);                       
+                C(R[0], R[1], A[0], A[1], r, 1, P);                           
+                const di = circ(cen, r, R, Ld);
+                const Dlo = di ? (di[0][1] > di[1][1] ? di[0] : di[1]) : [-65, 168], Dhi = R;
+                L(Dlo[0], Dlo[1], Dhi[0], Dhi[1], P);
+                const u = [Dlo[0] - A[0], Dlo[1] - A[1]], v = [Dhi[0] - Dlo[0], Dhi[1] - Dlo[1]];
+                const qa = v[0] * v[0] + v[1] * v[1], qb = 2 * (u[0] * v[0] + u[1] * v[1]), qc = u[0] * u[0] + u[1] * u[1] - Ll * Ll;
+                const disc = Math.max(0, qb * qb - 4 * qa * qc);
+                let tt = (-qb + Math.sqrt(disc)) / (2 * qa);
+                if (!(tt >= 0 && tt <= 1)) tt = (-qb - Math.sqrt(disc)) / (2 * qa);
+                tt = Math.max(0, Math.min(1, tt));
+                const E = [Dlo[0] + v[0] * tt, Dlo[1] + v[1] * tt];
+                L(A[0], A[1], E[0], E[1], P);
+                let best = null;
+                for (let s = 0.3; s <= 0.8; s += 0.05) for (let t = 0.25; t <= 0.85; t += 0.05) {
+                    const L1 = [A[0] + (E[0] - A[0]) * s, A[1] + (E[1] - A[1]) * s], R1 = [Dlo[0] + v[0] * t, Dlo[1] + v[1] * t];
+                    const pi = circ(L1, Lp1, R1, Lp2);
+                    if (!pi) continue;
+                    const ap = pi[0][1] < pi[1][1] ? pi[0] : pi[1];
+                    if (ap[1] > Math.min(L1[1], R1[1]) - 8) continue;
+                    const cost = Math.abs(ap[1] - (rimY - 15)) + 0.3 * Math.abs(ap[0]);
+                    if (!best || cost < best.cost) best = { L1, R1, ap, cost };
+                }
+                if (best) { L(best.L1[0], best.L1[1], best.ap[0], best.ap[1], P); L(best.ap[0], best.ap[1], best.R1[0], best.R1[1], P); }
+                else { const pl = polar(0, 58, 145, Lp1), pr = polar(0, 58, 35, Lp2); L(0, 58, pl[0], pl[1], P); L(0, 58, pr[0], pr[1], P); }
+                const veins = green.filter(l => l.shape === 'line').sort((a, b) => b.length - a.length);
+                const arcR = len => ((green.find(l => l.shape === 'curve' && Math.abs(l.length - len) < 1)) || {}).customR || len;
+                const leaf = (len, ang, sgn) => {
+                    const T = [sgn * len * Math.sin(ang * Math.PI / 180), 460 - len * Math.cos(ang * Math.PI / 180)];
+                    L(0, 460, T[0], T[1], G); C(0, 460, T[0], T[1], arcR(len), 1, G); C(0, 460, T[0], T[1], arcR(len), 0, G);
+                };
+                leaf(veins[0].length, 50, 1); leaf(veins[1].length, 50, -1);
+            } else if (levelId === 6) {
+                // МАШИНКА. 1 клітинка = 20. (0,0) — лівий нижній кут днища
+                const RD = '#e53935', BL = '#03a9f4', GR = '#78909c', DK = '#37474f', YL = '#fdd835';
+                const A = (x1, y1, x2, y2, r, sw, c) => segs.push({ k: 'curve', x1, y1, x2, y2, r, sweep: sw, color: c, w: 12, stat: false });
+                const Wn = (x1, y1, x2, y2, h, flip) => segs.push({ k: 'window', x1, y1, x2, y2, h, flip, color: BL, w: 12, stat: false });
+
+                // днище: 3 відрізки (між колесами)
+                L(0, 0, 40, 0, RD); L(100, 0, 300, 0, RD); L(360, 0, 400, 0, RD);
+                // контур: ліва сторона, дах, права сторона
+                A(0, 0, 90, -100, 120, 1, RD);        // ліва сторона, нижня дуга (опукла)
+                A(90, -100, 120, -140, 40, 0, RD);    // ліва сторона, верхня дуга (протилежний вигин)
+                A(120, -140, 320, -140, 200, 1, RD);
+                A(320, -140, 400, 0, 400, 1, RD);
+                // дверка і ручка
+                L(200, -80, 200, 0, GR);
+                L(170, -60, 190, -60, GR);
+                // вікна (основа, висота 60; flip = вертикальний бік на початку основи)
+                Wn(120, -80, 200, -80, 60, false);
+                Wn(220, -80, 320, -80, 60, true);
+                // колеса: по два півкола
+                [70, 330].forEach(cx => { A(cx - 30, 0, cx + 30, 0, 30, 1, DK); A(cx - 30, 0, cx + 30, 0, 30, 0, DK); });
+                // фари
+                A(0, 5, 0, -15, 10, 1, YL);
+                A(395, -38, 395, -2, 18, 1, YL);
+            } else if (levelId === 7) {
+                // БУДИНОЧОК
+                const R = '#e53935', O = '#fb8c00', B = '#03a9f4', K = '#78909c';
+                const ax = 110, ay = -Math.sqrt(220 * 220 - 155 * 155);       
+                L(-45, 0, ax, ay, R); L(ax, ay, 265, 0, R); L(-45, 0, 265, 0, R);
+                L(0, 0, 0, 220, O); L(220, 0, 220, 220, O); L(0, 220, 220, 220, O);
+                const sq = (x, y) => { L(x, y, x + 55, y, B); L(x + 55, y, x + 55, y + 55, B); L(x + 55, y + 55, x, y + 55, B); L(x, y + 55, x, y, B); };
+                sq(35, 25); sq(130, 25); sq(130, 120);                         
+                L(35, 120, 90, 120, B); L(35, 120, 35, 220, B); L(90, 120, 90, 220, B);   
+                L(10, -55.4, 10, -115.4, K); L(10, -115.4, 52.4, -157.8, K); L(52.4, -157.8, 52.4, -97.8, K);   
+            }
+            return segs;
+        }
+
+        function windowGeom(l) {
+            const dx = l.x2 - l.x1, dy = l.y2 - l.y1, len = Math.hypot(dx, dy);
+            const nx = dy / len, ny = -dx / len;
+            const W = l.flip ? { x: l.x1, y: l.y1 } : { x: l.x2, y: l.y2 };
+            const O = l.flip ? { x: l.x2, y: l.y2 } : { x: l.x1, y: l.y1 };
+            const V = { x: W.x + nx * l.h, y: W.y + ny * l.h };
+            const cross = (V.x - W.x) * (O.y - W.y) - (V.y - W.y) * (O.x - W.x);
+            const rot = Math.atan2(dy, dx) * 180 / Math.PI;
+            const d = `M ${O.x} ${O.y} L ${W.x} ${W.y} L ${V.x} ${V.y} A ${len} ${l.h} ${rot} 0 ${cross > 0 ? 1 : 0} ${O.x} ${O.y} Z`;
+            return { O, W, V, d };
+        }
+
+        function drawReference(levelId) {
+            const segs = idealFigure(levelId);
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, html = '';
+            const add = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+            segs.forEach(sg => {
+                const st = `stroke="${sg.color}" stroke-width="${sg.w}" fill="none" stroke-linecap="round"`;
+                if (sg.k === 'circle') {
+                    add(sg.cx - sg.r, sg.cy - sg.r); add(sg.cx + sg.r, sg.cy + sg.r);
+                    html += `<circle cx="${sg.cx}" cy="${sg.cy}" r="${sg.r}" ${st}/>`;
+                } else if (sg.k === 'curve') {
+                    const ap = arcApex({ shape: 'curve', x1: sg.x1, y1: sg.y1, x2: sg.x2, y2: sg.y2, customR: sg.r, customRy: sg.ry, sweep: sg.sweep });
+                    add(sg.x1, sg.y1); add(sg.x2, sg.y2); add(ap.x, ap.y);
+                    const ry = sg.ry || sg.r;
+                    html += `<path d="M ${sg.x1} ${sg.y1} A ${sg.r} ${ry} 0 0 ${sg.sweep} ${sg.x2} ${sg.y2}" ${st}/>`;
+                } else if (sg.k === 'window') {
+                    const g = windowGeom(sg);
+                    [g.O, g.W, g.V].forEach(p => add(p.x, p.y));
+                    html += `<path d="${g.d}" stroke="${sg.color}" stroke-width="${sg.w}" fill="#b3e5fc" stroke-linejoin="round"/>`;
+                } else {
+                    add(sg.x1, sg.y1); add(sg.x2, sg.y2);
+                    html += `<line x1="${sg.x1}" y1="${sg.y1}" x2="${sg.x2}" y2="${sg.y2}" ${st}/>`;
+                }
+            });
+            const pad = 24, el = document.getElementById('referenceSvg');
+            el.setAttribute('viewBox', `${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`);
+            el.innerHTML = html;
+        }
+
+        function initLevel(levelId, fresh = false) {
+            currentLevel = levelId;
+            lines = [];
+            staticElements = [];
+            staticSnapPoints = [];
+            sun = null;
+            dragState = null;
+            levelDone = false;
+            document.getElementById('successModal').style.display = 'none';
+            svg.innerHTML = '';
+
+            const lvl = levelsData[levelId - 1];
+            document.getElementById('levelTitle').innerText = lvl.title;
+
+            boardW = svg.clientWidth || 900;
+            boardH = svg.clientHeight || 642;
+
+            if (levelId === 1 || levelId === 2) {
+                const count = levelId === 1 ? 3 : 4;
+                const len = 150;
+                const startX = (boardW - (count * len + (count - 1) * 20)) / 2;
+                for (let i = 0; i < count; i++) {
+                    lines.push({ shape: 'line', x1: startX + i*(len+20), y1: 580, x2: startX + i*(len+20) + len, y2: 580, id: i, color: '#ff9800' });
+                }
+            }
+            else if (levelId === 3) {
+                sun = { cx: boardW/2, cy: 250, r: 60, pts: [] };
+                staticElements.push({ type: 'circle', cx: sun.cx, cy: sun.cy, r: sun.r, color: '#fdd835', fill: 'none', width: 14 });
+                for (let i = 0; i < 10; i++) {
+                    const a = (-90 + i * 36) * Math.PI / 180;
+                    const p = { x: sun.cx + sun.r * Math.cos(a), y: sun.cy + sun.r * Math.sin(a), id: `sun_${i}` };
+                    sun.pts.push(p);
+                    staticSnapPoints.push(p);
+                }
+                const len = 120, cols = 5;
+                const startX = (boardW - (cols * len + (cols - 1) * 20)) / 2;
+                for (let i = 0; i < 10; i++) {
+                    const row = Math.floor(i / 5), col = i % 5;
+                    lines.push({ shape: 'line', x1: startX + col*(len+20), y1: 540 + row*40,
+                                 x2: startX + col*(len+20) + len, y2: 540 + row*40, id: i, color: '#fdd835' });
+                }
+            }
+            else if (levelId === 4) {
+                const startStemX = boardW/2 + 150, startStemY = 100;
+                const endStemX = boardW/2 - 100, endStemY = 450;
+                staticElements.push({ type: 'line', x1: startStemX, y1: startStemY, x2: endStemX, y2: endStemY, color: '#8bc34a', width: 12 });
+
+                for (let i = 0; i < 6; i++) {
+                    const t = 0.15 + i * 0.14;
+                    staticSnapPoints.push({
+                        x: startStemX + (endStemX - startStemX) * t,
+                        y: startStemY + (endStemY - startStemY) * t,
+                        id: `stem_${i}`
+                    });
+                }
+
+                let id = 0;
+                const totalWidth = LEAF_LENGTHS.reduce((s, l) => s + l, 0) + (LEAF_LENGTHS.length - 1) * 20;
+                let currentX = (boardW - totalWidth) / 2;
+                LEAF_LENGTHS.forEach(len => {
+                    lines.push({ shape: 'line', x1: currentX, y1: 530, x2: currentX + len, y2: 530, id: id++, color: '#8bc34a' });
+                    lines.push({ shape: 'line', x1: currentX, y1: 570, x2: currentX + len, y2: 570, id: id++, color: '#8bc34a' });
+                    currentX += len + 20;
+                });
+            }
+            else if (levelId === 5) {
+                const sx = boardW/2, sy = 190, ey = 460;
+                const ox = Math.max(0, (boardW - 780) / 2);   
+                const P = '#f06292', G = '#8bc34a';
+                staticElements.push({ type: 'line', x1: sx, y1: sy, x2: sx, y2: ey, color: '#4caf50', width: 10 });
+                staticSnapPoints.push({ x: sx, y: sy, id: 'stem_top' });    
+                staticSnapPoints.push({ x: sx, y: ey, id: 'stem_base' });   
+
+                let id = 0;
+                lines.push({ shape: 'curve', x1: ox+20,  y1: 612, x2: ox+240, y2: 612, id: id++, color: P, sweep: 1, customR: 110 });
+                lines.push({ shape: 'line',  x1: ox+270, y1: 505, x2: ox+460, y2: 505, id: id++, color: P });
+                lines.push({ shape: 'line',  x1: ox+490, y1: 505, x2: ox+615, y2: 505, id: id++, color: P });
+                lines.push({ shape: 'line',  x1: ox+645, y1: 570, x2: ox+715, y2: 570, id: id++, color: P });
+                lines.push({ shape: 'line',  x1: ox+645, y1: 505, x2: ox+715, y2: 505, id: id++, color: P });
+                const leaf = (x, len, r) => {
+                    lines.push({ shape: 'curve', x1: x, y1: 548, x2: x + len, y2: 548, id: id++, color: G, sweep: 1, customR: r });
+                    lines.push({ shape: 'line',  x1: x, y1: 570, x2: x + len, y2: 570, id: id++, color: G });
+                    lines.push({ shape: 'curve', x1: x, y1: 592, x2: x + len, y2: 592, id: id++, color: G, sweep: 0, customR: r });
+                };
+                leaf(ox + 270, 190, 190);   
+                leaf(ox + 500, 105, 75);    
+            }
+            else if (levelId === 6) {
+                // МАШИНКА
+                const items = idealFigure(6).map(s => {
+                    const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+                    if (s.k === 'window') return { shape: 'window', len, color: s.color, h: s.h, flip: s.flip };
+                    if (s.k === 'curve') return { shape: 'curve', len, color: s.color, sweep: s.sweep, customR: s.r };
+                    return { shape: 'line', len, color: s.color };
+                });
+                const GAP = 14, avail = boardW - 80;
+                const pack = list => {
+                    const rows = [];
+                    let row = { items: [], w: 0 };
+                    list.forEach(it => {
+                        const gap = row.items.length ? GAP : 0;
+                        if (row.items.length && row.w + gap + it.len > avail) { rows.push(row); row = { items: [], w: 0 }; }
+                        row.w += (row.items.length ? GAP : 0) + it.len;
+                        row.items.push(it);
+                    });
+                    if (row.items.length) rows.push(row);
+                    return rows;
+                };
+                const byLen = (a, b) => b.len - a.len;
+                const straight = items.filter(i => i.shape === 'line').sort(byLen);
+                const small = items.filter(i => i.shape === 'window' || (i.shape === 'curve' && i.len < 100)).sort(byLen);
+                const big = items.filter(i => i.shape === 'curve' && i.len >= 100).sort(byLen);
+                let id = 0;
+                const place = (rows, ys) => rows.forEach((row, ri) => {
+                    const y = ys[Math.min(ri, ys.length - 1)];
+                    let x = (boardW - row.w) / 2;
+                    row.items.forEach(it => {
+                        const rev = it.shape === 'curve' && it.sweep === 0;
+                        lines.push({ shape: it.shape, x1: rev ? x + it.len : x, y1: y, x2: rev ? x : x + it.len, y2: y,
+                                     id: id++, color: it.color, sweep: it.sweep, customR: it.customR, h: it.h, flip: it.flip });
+                        x += it.len + GAP;
+                    });
+                });
+                place(pack(straight), [boardH - 142]);
+                place(pack(small), [boardH - 72]);
+                place(pack(big), [boardH - 24]);
+            }
+            else if (levelId === 7) {
+                // БУДИНОЧОК
+                const RED = '#e53935', ORANGE = '#fb8c00', BLUE = '#03a9f4', GREY = '#78909c';
+                const rows = [
+                    [[RED, 220, 2], [RED, 310, 1]],                 
+                    [[ORANGE, 220, 3]],                              
+                    [[BLUE, 55, 7], [BLUE, 100, 2]],                 
+                    [[BLUE, 55, 6], [GREY, 60, 3]]                   
+                ];
+                const GAP = 16, GROUP_GAP = 36, avail = boardW - 80;    
+                const placed = [];                                       
+                rows.forEach(groups => {
+                    let row = { items: [], w: 0 };
+                    groups.forEach(([c, len, count]) => {
+                        for (let i = 0; i < count; i++) {
+                            let gap = row.items.length ? (i === 0 ? GROUP_GAP : GAP) : 0;
+                            if (row.items.length && row.w + gap + len > avail) { placed.push(row); row = { items: [], w: 0 }; gap = 0; }
+                            row.items.push({ c, len, gap }); row.w += gap + len;
+                        }
+                    });
+                    placed.push(row);
+                });
+                const step = placed.length > 4 ? 26 : 30;
+                let id = 0;
+                placed.forEach((row, ri) => {
+                    const y = boardH - 90 - (placed.length - 1) * step / 2 + ri * step;
+                    let x = (boardW - row.w) / 2;
+                    row.items.forEach(it => {
+                        x += it.gap;
+                        lines.push({ shape: 'line', x1: x, y1: y, x2: x + it.len, y2: y, id: id++, color: it.c });
+                        x += it.len;
+                    });
+                });
+            }
+            else if (levelId === 8) {
+                let id = 0;
+                const startY = boardH - 90;
+                
+                const lineLengths = [160, 80, 40, 20, 10];
+                const lineX = [50, 230, 330, 390, 430];
+                
+                lineLengths.forEach((len, idx) => {
+                    for(let i = 0; i < 30; i++) {
+                        lines.push({ shape: 'line', x1: lineX[idx], y1: startY, x2: lineX[idx] + len, y2: startY, id: id++, color: '#3949ab' });
+                    }
+                });
+
+                const curveRadii = [10, 20, 40];
+                const curveX = [480, 530, 600]; 
+                
+                curveRadii.forEach((r, idx) => {
+                    for(let i = 0; i < 10; i++) {
+                        lines.push({ shape: 'curve', x1: curveX[idx], y1: startY, x2: curveX[idx] + r*2, y2: startY, id: id++, color: '#d81b60', sweep: 1, customR: r });
+                    }
+                });
+            }
+   
+            document.getElementById('panelTitle').innerText = levelId === 8 ? "Збережені:" : "Зразок:";
+            document.getElementById('referenceSvg').style.display = levelId === 8 ? 'none' : 'block';
+            document.getElementById('savedContainer').style.display = levelId === 8 ? 'flex' : 'none';
+            document.getElementById('saveBtn').style.display = levelId === 8 ? 'block' : 'none';
+
+            lines.forEach(l => { l.length = Math.hypot(l.x2 - l.x1, l.y2 - l.y1); });
+
+            // відновлюємо збережений прогрес цього етапу
+            const saved = fresh ? null : progress[levelId];
+            if (saved) {
+                lines = JSON.parse(JSON.stringify(saved.lines));
+                levelDone = saved.done;
+            }
+
+            drawReference(levelId);
+            render();
+            renderMenu();
+            if (levelDone) showWin();
+        }
+
+        // ---------- МЕНЮ ЕТАПІВ І ПРОГРЕС ----------
+        function saveProgress() {
+            progress[currentLevel] = { lines: JSON.parse(JSON.stringify(lines)), done: levelDone };
+        }
+
+        function renderMenu() {
+            const menu = document.getElementById('levelMenu');
+            let html = '<h3>Етапи</h3>';
+            levelsData.slice(0, MENU_LEVELS).forEach(l => {
+                const done = progress[l.id] && progress[l.id].done;
+                const cls = 'level-btn' + (l.id === currentLevel ? ' active' : '') + (done ? ' done' : '');
+                html += `<button class="${cls}" onclick="goToLevel(${l.id})"><span>${l.title.replace('Етап ', '')}</span><span class="lvl-status">${done ? '✅' : ''}</span></button>`;
+            });
+            menu.innerHTML = html;
+        }
+
+        function goToLevel(id) {
+            if (id === currentLevel) return;
+            if (dragState) return;
+            saveProgress();
+            initLevel(id);
+        }
+
+        function createSVGElement(tag, attrs) {
+            const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+            for (let k in attrs) el.setAttribute(k, attrs[k]);
+            return el;
+        }
+
+        function render() {
+            svg.innerHTML = '';
+
+            staticElements.forEach(el => {
+                if (el.type === 'circle') {
+                    svg.appendChild(createSVGElement('circle', { cx: el.cx, cy: el.cy, r: el.r, stroke: el.color, fill: el.fill, 'stroke-width': el.width, class: 'static-element' }));
+                } else if (el.type === 'line') {
+                    svg.appendChild(createSVGElement('line', { x1: el.x1, y1: el.y1, x2: el.x2, y2: el.y2, stroke: el.color, 'stroke-width': el.width, class: 'static-element' }));
+                }
+            });
+
+            staticSnapPoints.forEach(pt => {
+                svg.appendChild(createSVGElement('circle', { cx: pt.x, cy: pt.y, r: 5, class: 'snap-hint' }));
+                svg.appendChild(createSVGElement('circle', { cx: pt.x, cy: pt.y, r: 12, class: 'snap-point', id: `snap_static_${pt.id}` }));
+            });
+
+            lines.forEach(line => {
+                svg.appendChild(createSVGElement('circle', { cx: line.x1, cy: line.y1, r: 12, class: 'snap-point', id: `snap1_${line.id}` }));
+                svg.appendChild(createSVGElement('circle', { cx: line.x2, cy: line.y2, r: 12, class: 'snap-point', id: `snap2_${line.id}` }));
+            });
+
+            lines.forEach((line, index) => {
+                const group = createSVGElement('g', {});
+                let visualLine, hitbox;
+
+                if (line.shape === 'curve') {
+                    const r = line.customR ? line.customR : (line.length / 2);
+                    const ry = line.customRy ? line.customRy : r;
+                    const sweep = line.sweep !== undefined ? line.sweep : 1;
+                    const d = `M ${line.x1} ${line.y1} A ${r} ${ry} 0 0 ${sweep} ${line.x2} ${line.y2}`;
+                    visualLine = createSVGElement('path', { d: d, class: 'stick', stroke: line.color, fill: 'none' });
+                    hitbox = createSVGElement('path', { d: d, class: 'stick-hitbox', fill: 'none' });
+                } else if (line.shape === 'window') {
+                    const g = windowGeom(line);
+                    visualLine = createSVGElement('path', { d: g.d, class: 'stick', stroke: line.color, fill: '#b3e5fc', 'stroke-linejoin': 'round' });
+                    hitbox = createSVGElement('path', { d: g.d, class: 'stick-hitbox', fill: 'transparent' });
+                } else {
+                    visualLine = createSVGElement('line', { x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2, class: 'stick', stroke: line.color });
+                    hitbox = createSVGElement('line', { x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2, class: 'stick-hitbox' });
+                }
+
+                group.appendChild(visualLine);
+                group.appendChild(hitbox);
+                svg.appendChild(group);
+
+                hitbox.addEventListener('pointerdown', (e) => startDrag(e, index));
+                hitbox.addEventListener('pointermove', (e) => updateCursor(e, index, hitbox));
+            });
+        }
+
+        function highlight(ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('visible');
+            });
+        }
+
+        function getHitPart(x, y, line) {
+            const dx = line.x2 - line.x1, dy = line.y2 - line.y1;
+            const len2 = dx * dx + dy * dy;
+            let t = ((x - line.x1) * dx + (y - line.y1) * dy) / len2;
+            t = Math.max(0, Math.min(1, t));
+            const zone = Math.min(0.3, 28 / Math.sqrt(len2));
+            if (t <= zone) return 'end1';
+            if (t >= 1 - zone) return 'end2';
+            return 'middle';
+        }
+
+        function updateCursor(e, index, hitboxElement) {
+            if (dragState) return;
+            const pt = getMousePos(e);
+            const part = getHitPart(pt.x, pt.y, lines[index]);
+            if (part === 'middle') hitboxElement.classList.remove('cursor-rotate');
+            else hitboxElement.classList.add('cursor-rotate');
+        }
+
+        function getMousePos(e) {
+            const rect = svg.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+
+        function findClosestEnd(x, y, excludeLineIndex, reach) {
+            let closest = null, minDist = Infinity;
+            const ok = (px, py) => !reach || Math.abs(Math.hypot(px - reach.px, py - reach.py) - reach.len) <= REACH;
+            const consider = (px, py, domId) => {
+                if (!ok(px, py)) return;
+                const d = Math.hypot(px - x, py - y);
+                if (d < minDist) { minDist = d; closest = { x: px, y: py, domId, dist: d }; }
+            };
+            lines.forEach((l, idx) => {
+                if (idx === excludeLineIndex) return;
+                consider(l.x1, l.y1, `snap1_${l.id}`);
+                consider(l.x2, l.y2, `snap2_${l.id}`);
+            });
+            staticSnapPoints.forEach(pt => consider(pt.x, pt.y, `snap_static_${pt.id}`));
+            return closest;
+        }
+
+        // Вершина дуги (найвіддаленіша від хорди точка). Висота сегмента (sagitta) завжди
+        // рахується з радіуса й довжини хорди — customRy тут свідомо не використовується.
+        function arcApex(l) {
+            if (l.shape !== 'curve') return null;
+            const dx = l.x2 - l.x1, dy = l.y2 - l.y1, c = Math.hypot(dx, dy);
+            const h = c / 2;
+            const rr = l.customR || h;
+            const s = Math.max(rr, h) - Math.sqrt(Math.max(0, rr * rr - h * h));
+            const k = (l.sweep !== undefined ? l.sweep : 1) === 1 ? -1 : 1;   
+            const bx = k * (-dy / c), by = k * (dx / c);
+            return { x: (l.x1 + l.x2) / 2 + bx * s, y: (l.y1 + l.y2) / 2 + by * s, s, bx, by };
+        }
+
+        function checkSnapWholeLine(line, excludeIndex) {
+            let best = null;
+            const consider = (s, ex, ey) => {
+                if (s && s.dist < SNAP_DISTANCE && (!best || s.dist < best.dist))
+                    best = { dx: s.x - ex, dy: s.y - ey, domId: s.domId, dist: s.dist };
+            };
+            consider(findClosestEnd(line.x1, line.y1, excludeIndex), line.x1, line.y1);
+            consider(findClosestEnd(line.x2, line.y2, excludeIndex), line.x2, line.y2);
+            const ap = arcApex(line);
+            if (ap) staticSnapPoints.forEach(pt => {
+                consider({ x: pt.x, y: pt.y, dist: Math.hypot(pt.x - ap.x, pt.y - ap.y), domId: `snap_static_${pt.id}` }, ap.x, ap.y);
+            });
+            return best;
+        }
+
+        function startDrag(e, index) {
+            if (levelDone) return;
+            const pt = getMousePos(e);
+            dragState = { lineIndex: index, part: getHitPart(pt.x, pt.y, lines[index]), startX: pt.x, startY: pt.y, initialLine: { ...lines[index] } };
+            svg.setPointerCapture(e.pointerId);
+        }
+
+        svg.addEventListener('pointermove', (e) => {
+            if (!dragState) return;
+            const pt = getMousePos(e);
+            const line = lines[dragState.lineIndex];
+            const init = dragState.initialLine;
+            const snapIds = [];
+
+            if (dragState.part === 'middle') {
+                let dx = pt.x - dragState.startX;
+                let dy = pt.y - dragState.startY;
+                const minX = Math.min(init.x1, init.x2), maxX = Math.max(init.x1, init.x2);
+                const minY = Math.min(init.y1, init.y2), maxY = Math.max(init.y1, init.y2);
+                dx = Math.min(Math.max(dx, 10 - minX), boardW - 10 - maxX);
+                dy = Math.min(Math.max(dy, 10 - minY), boardH - 10 - maxY);
+
+                line.x1 = init.x1 + dx; line.y1 = init.y1 + dy;
+                line.x2 = init.x2 + dx; line.y2 = init.y2 + dy;
+
+                const snapped = checkSnapWholeLine(line, dragState.lineIndex);
+                if (snapped) {
+                    line.x1 += snapped.dx; line.y1 += snapped.dy;
+                    line.x2 += snapped.dx; line.y2 += snapped.dy;
+                    snapIds.push(snapped.domId);
+                }
+            } else {
+                const isEnd1 = dragState.part === 'end1';
+                const pivotX = isEnd1 ? init.x2 : init.x1;
+                const pivotY = isEnd1 ? init.y2 : init.y1;
+
+                const snap = findClosestEnd(pt.x, pt.y, dragState.lineIndex, { px: pivotX, py: pivotY, len: line.length });
+                let newX, newY;
+                if (snap && snap.dist < SNAP_DISTANCE) {      
+                    newX = snap.x; newY = snap.y;
+                    snapIds.push(snap.domId);
+                } else {                                       
+                    const angle = Math.atan2(pt.y - pivotY, pt.x - pivotX);
+                    newX = pivotX + line.length * Math.cos(angle);
+                    newY = pivotY + line.length * Math.sin(angle);
+                }
+
+                if (isEnd1) { line.x1 = newX; line.y1 = newY; line.x2 = pivotX; line.y2 = pivotY; }
+                else { line.x1 = pivotX; line.y1 = pivotY; line.x2 = newX; line.y2 = newY; }
+            }
+
+            render();
+            highlight(snapIds);   
+        });
+
+        function endDrag(e) {
+            if (!dragState) return;
+            dragState = null;
+            try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
+            document.querySelectorAll('.snap-point').forEach(el => el.classList.remove('visible'));
+            checkWinCondition();
+            saveProgress();
+            renderMenu();
+        }
+        svg.addEventListener('pointerup', endDrag);
+        svg.addEventListener('pointercancel', endDrag);
+
+
+        const endsOf = l => [{ x: l.x1, y: l.y1 }, { x: l.x2, y: l.y2 }];
+        const near = (p, q) => Math.hypot(p.x - q.x, p.y - q.y) < ATTACH;
+
+        function checkPolygon() {
+            const n = currentLevel === 1 ? 3 : 4;
+            const CLOSE = ATTACH;          
+            const points = [];
+            lines.forEach((l, i) => {
+                points.push({ x: l.x1, y: l.y1, lineIndex: i, isEnd1: true });
+                points.push({ x: l.x2, y: l.y2, lineIndex: i, isEnd1: false });
+            });
+
+            const vertices = [], used = new Array(points.length).fill(false);
+            for (let i = 0; i < points.length; i++) {
+                if (used[i]) continue;
+                const cluster = [points[i]];
+                used[i] = true;
+                for (let j = i + 1; j < points.length; j++) {
+                    if (!used[j] && Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y) < CLOSE) {
+                        cluster.push(points[j]);
+                        used[j] = true;
+                    }
+                }
+                vertices.push(cluster);
+            }
+            if (vertices.length !== n) return false;
+            for (const v of vertices) if (v.length !== 2 || v[0].lineIndex === v[1].lineIndex) return false;
+
+            const adj = lines.map(() => []);
+            vertices.forEach(v => { adj[v[0].lineIndex].push(v[1].lineIndex); adj[v[1].lineIndex].push(v[0].lineIndex); });
+            const seen = new Set([0]), stack = [0];
+            while (stack.length) {
+                const i = stack.pop();
+                adj[i].forEach(j => { if (!seen.has(j)) { seen.add(j); stack.push(j); } });
+            }
+            if (seen.size !== lines.length) return false;
+
+            const minAngle = currentLevel === 1 ? 40 : 80, maxAngle = currentLevel === 1 ? 80 : 100;
+            for (const v of vertices) {
+                const A = lines[v[0].lineIndex], B = lines[v[1].lineIndex];
+                const ax = v[0].isEnd1 ? (A.x2 - A.x1) : (A.x1 - A.x2);
+                const ay = v[0].isEnd1 ? (A.y2 - A.y1) : (A.y1 - A.y2);
+                const bx = v[1].isEnd1 ? (B.x2 - B.x1) : (B.x1 - B.x2);
+                const by = v[1].isEnd1 ? (B.y2 - B.y1) : (B.y1 - B.y2);
+                let cos = (ax * bx + ay * by) / (Math.hypot(ax, ay) * Math.hypot(bx, by));
+                cos = Math.max(-1, Math.min(1, cos));
+                const deg = Math.acos(cos) * 180 / Math.PI;
+                if (deg < minAngle || deg > maxAngle) return false;
+            }
+            return true;
+        }
+
+        function checkSun() {
+            const used = new Set();
+            for (const l of lines) {
+                const e = endsOf(l);
+                let ok = false;
+                for (const [a, b] of [[e[0], e[1]], [e[1], e[0]]]) {
+                    const k = sun.pts.findIndex(p => near(p, a));
+                    if (k < 0 || used.has(k)) continue;
+                    const ray = Math.atan2(b.y - a.y, b.x - a.x);
+                    const rad = Math.atan2(a.y - sun.cy, a.x - sun.cx);
+                    let d = (((ray - rad) * 180 / Math.PI) % 360 + 360) % 360;
+                    if (d > 180) d = 360 - d;
+                    if (d <= 20) { used.add(k); ok = true; break; }
+                }
+                if (!ok) return false;
+            }
+            return used.size === 10;
+        }
+
+        function checkLeaf() {
+            const stem = staticElements[0];
+            const sx = stem.x1 - stem.x2, sy = stem.y1 - stem.y2;   
+            const sl = Math.hypot(sx, sy);
+            return LEAF_LENGTHS.every((len, i) => {
+                const pt = staticSnapPoints[i];
+                const attached = lines.filter(l => endsOf(l).some(p => near(p, pt)));
+                if (attached.length !== 2 || !attached.every(l => Math.abs(l.length - len) < 1)) return false;
+                const cr = [];
+                for (const l of attached) {
+                    const [p, q] = endsOf(l);
+                    const far = near(p, pt) ? q : p;
+                    const vx = far.x - pt.x, vy = far.y - pt.y;
+                    const dot = (vx * sx + vy * sy) / (Math.hypot(vx, vy) * sl);
+                    if (dot <= 0) return false;                      
+                    const ang = Math.acos(Math.min(1, dot)) * 180 / Math.PI;
+                    if (ang < LEAF_MIN_ANGLE || ang > LEAF_MAX_ANGLE) return false;
+                    cr.push(sx * vy - sy * vx);
+                }
+                return cr[0] * cr[1] < 0;                            
+            });
+        }
+
+        function checkFlower() {
+            const invTop = boardH - 160;
+            if (lines.some(l => (l.y1 + l.y2) / 2 > invTop)) return false;
+            const top = staticSnapPoints.find(p => p.id === 'stem_top');
+            const base = staticSnapPoints.find(p => p.id === 'stem_base');
+            const pink = lines.filter(l => l.color === '#f06292');
+            const green = lines.filter(l => l.color === '#8bc34a');
+            const inR = (v, a, b) => v >= a && v <= b;
+
+            const bowl = pink.find(l => l.shape === 'curve');
+            const ap = arcApex(bowl);
+            if (Math.hypot(ap.x - top.x, ap.y - top.y) > ATTACH + 5 || ap.by < 0.9) return false;
+            const [rl, rr] = endsOf(bowl).sort((a, b) => a.x - b.x);
+            const W = rr.x - rl.x, rimY = (rl.y + rr.y) / 2;
+            const U = p => (p.x - rl.x) / W, V = p => (p.y - rimY) / ap.s;
+
+            const straight = pink.filter(l => l.shape === 'line').sort((a, b) => b.length - a.length);
+            const diag = straight[0], shorts = straight.slice(1);
+            const [hi, lo] = endsOf(diag).sort((a, b) => a.y - b.y);
+            if (!(inR(U(lo), 0.05, 0.55) && inR(V(lo), 0.35, 1.05) && inR(U(hi), 0.6, 1.1) && inR(V(hi), -0.35, 0.35))) return false;
+
+            for (const s of shorts) {
+                if (!endsOf(s).every(p => inR(U(p), -0.05, 1.05) && inR(V(p), -0.6, 0.75))) return false;
+            }
+            for (let i = 0; i < shorts.length; i++) {
+                for (let j = i + 1; j < shorts.length; j++) {
+                    const a = shorts[i], b = shorts[j];
+                    if (Math.hypot((a.x1 + a.x2 - b.x1 - b.x2) / 2, (a.y1 + a.y2 - b.y1 - b.y2) / 2) < 30) return false;
+                }
+            }
+
+            const used = new Set(), dirs = [];
+            const veins = green.filter(l => l.shape === 'line'), arcs = green.filter(l => l.shape === 'curve');
+            if (veins.length !== 2) return false;
+            for (const L of veins) {
+                const e = endsOf(L);
+                const bi = e.findIndex(p => near(p, base));
+                if (bi < 0) return false;
+                const B = e[bi], T = e[1 - bi];
+                const vx = T.x - B.x, vy = T.y - B.y;
+                if (vy >= 0) return false;
+                const ang = Math.atan2(Math.abs(vx), -vy) * 180 / Math.PI;
+                if (ang < 25 || ang > 75) return false;
+                dirs.push(Math.sign(vx));
+                const found = { 1: null, '-1': null };
+                for (const c of arcs) {
+                    if (used.has(c)) continue;
+                    const [p, q] = endsOf(c);
+                    if (!((near(p, B) && near(q, T)) || (near(p, T) && near(q, B)))) continue;
+                    const a = arcApex(c);
+                    const side = Math.sign(vx * (a.y - (B.y + T.y) / 2) - vy * (a.x - (B.x + T.x) / 2));
+                    if (side !== 0 && !found[side]) found[side] = c;
+                }
+                if (!found[1] || !found[-1]) return false;
+                used.add(found[1]); used.add(found[-1]);
+            }
+            return dirs[0] * dirs[1] < 0;
+        }
+
+        const HN = 28;   
+        const nearH = (p, q) => Math.hypot(p.x - q.x, p.y - q.y) < HN;
+        const midOf = l => ({ x: (l.x1 + l.x2) / 2, y: (l.y1 + l.y2) / 2 });
+        const isHoriz = (l, t = 0.26) => Math.abs(l.y2 - l.y1) <= t * l.length;
+        const isVert = (l, t = 0.26) => Math.abs(l.x2 - l.x1) <= t * l.length;
+        function distToSeg(p, a, b) {
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+            return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+        }
+
+        function squareCenter(pcs) {
+            const pts = [];
+            pcs.forEach((l, i) => endsOf(l).forEach((p, k) => pts.push({ x: p.x, y: p.y, i, k })));
+            const used = new Array(8).fill(false), vs = [];
+            for (let a = 0; a < 8; a++) {
+                if (used[a]) continue;
+                const cl = [pts[a]]; used[a] = true;
+                for (let b = a + 1; b < 8; b++) if (!used[b] && nearH(pts[a], pts[b])) { cl.push(pts[b]); used[b] = true; }
+                if (cl.length !== 2 || cl[0].i === cl[1].i) return null;
+                vs.push(cl);
+            }
+            if (vs.length !== 4 || !pcs.every(l => isHoriz(l) || isVert(l))) return null;
+            for (const [A, B] of vs) {
+                const fa = endsOf(pcs[A.i])[1 - A.k], fb = endsOf(pcs[B.i])[1 - B.k];
+                const ax = fa.x - A.x, ay = fa.y - A.y, bx = fb.x - B.x, by = fb.y - B.y;
+                const cos = (ax * bx + ay * by) / (Math.hypot(ax, ay) * Math.hypot(bx, by));
+                const deg = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+                if (deg < 70 || deg > 110) return null;
+            }
+            return { x: pts.reduce((s, p) => s + p.x, 0) / 8, y: pts.reduce((s, p) => s + p.y, 0) / 8 };
+        }
+
+        function checkHouse() {
+            if (lines.some(l => midOf(l).y > boardH - 160)) return false;          
+            const col = c => lines.filter(l => l.color === c);
+            const red = col('#e53935'), orange = col('#fb8c00'), blue = col('#03a9f4'), grey = col('#78909c');
+            const chim = grey;
+
+            if (red.length !== 3) return false;
+            const rs = red.slice().sort((a, b) => b.length - a.length);
+            const base = rs[0], sd = [rs[1], rs[2]];
+            if (!isHoriz(base)) return false;
+            const [P, Q] = endsOf(base).sort((a, b) => a.x - b.x);
+            const E0 = endsOf(sd[0]), E1 = endsOf(sd[1]);
+            let apex = null;
+            for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+                if (!nearH(E0[i], E1[j])) continue;
+                const o1 = E0[1 - i], o2 = E1[1 - j];
+                if ((nearH(o1, P) && nearH(o2, Q)) || (nearH(o1, Q) && nearH(o2, P))) apex = { x: (E0[i].x + E1[j].x) / 2, y: (E0[i].y + E1[j].y) / 2 };
+            }
+            const roofY = (P.y + Q.y) / 2;
+            if (!apex || apex.y > roofY - 100) return false;
+
+            if (orange.length !== 3) return false;
+            const floor = orange.slice().sort((a, b) => Math.abs(a.y2 - a.y1) - Math.abs(b.y2 - b.y1))[0];
+            const walls = orange.filter(l => l !== floor).sort((a, b) => midOf(a).x - midOf(b).x);
+            if (!isHoriz(floor) || !walls.every(l => isVert(l))) return false;
+            const [FL, FR] = endsOf(floor).sort((a, b) => a.x - b.x);
+            const wEnds = l => { const e = endsOf(l).sort((a, b) => a.y - b.y); return { top: e[0], bot: e[1] }; };
+            const wl = wEnds(walls[0]), wr = wEnds(walls[1]);
+            if (!nearH(wl.bot, FL) || !nearH(wr.bot, FR)) return false;
+            if (Math.abs(wl.top.y - roofY) > 35 || Math.abs(wr.top.y - roofY) > 35) return false;
+            const oL = wl.top.x - P.x, oR = Q.x - wr.top.x;
+            if (oL < 15 || oR < 15 || oL > 95 || oR > 95 || Math.abs(oL - oR) > 60) return false;
+            const xl = (wl.top.x + wl.bot.x) / 2, yt = (wl.top.y + wr.top.y) / 2, floorY = (FL.y + FR.y) / 2;
+
+            const comps = [], seen = new Array(blue.length).fill(false);
+            blue.forEach((l, i) => {
+                if (seen[i]) return;
+                const grp = [i]; seen[i] = true;
+                for (let k = 0; k < grp.length; k++) blue.forEach((m, j) => {
+                    if (!seen[j] && endsOf(blue[grp[k]]).some(p => endsOf(m).some(q => nearH(p, q)))) { seen[j] = true; grp.push(j); }
+                });
+                comps.push(grp.map(k => blue[k]));
+            });
+            const squares = comps.filter(c => c.length === 4), doors = comps.filter(c => c.length === 3);
+            if (comps.length !== 4 || squares.length !== 3 || doors.length !== 1) return false;
+            const centers = [];
+            for (const c of squares) {
+                const ctr = squareCenter(c);
+                if (!ctr) return false;
+                centers.push({ u: ctr.x - xl, v: ctr.y - yt });
+            }
+            const dp = doors[0].slice().sort((a, b) => a.length - b.length);
+            const dTop = dp[0], dSides = [dp[1], dp[2]];
+            if (Math.abs(dTop.length - dSides[0].length) < 10 || !isHoriz(dTop) || !dSides.every(l => isVert(l))) return false;
+            const [T1, T2] = endsOf(dTop).sort((a, b) => a.x - b.x);
+            const sideAt = (l, T) => { const e = endsOf(l), i = e.findIndex(p => nearH(p, T)); return i < 0 ? null : { j: e[i], b: e[1 - i] }; };
+            let door = null;
+            for (const [s1, s2] of [[dSides[0], dSides[1]], [dSides[1], dSides[0]]]) {
+                const a = sideAt(s1, T1), b = sideAt(s2, T2);
+                if (a && b) door = { a, b };
+            }
+            if (!door || door.a.b.y < door.a.j.y + 60 || door.b.b.y < door.b.j.y + 60) return false;
+            if (Math.abs(door.a.b.y - floorY) > 35 || Math.abs(door.b.b.y - floorY) > 35) return false;
+            const dU = (T1.x + T2.x) / 2 - xl, dV = (T1.y + T2.y) / 2 - yt;
+            const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+            const fits = flip => {                         
+                const X = u => flip ? 220 - u : u;
+                const slots = [[X(62.5), 52.5], [X(157.5), 52.5], [X(157.5), 147.5]];
+                const m = perms.find(pm => pm.every((ci, si) => Math.hypot(centers[ci].u - slots[si][0], centers[ci].v - slots[si][1]) <= 38));
+                if (!m || Math.abs(centers[m[0]].v - centers[m[1]].v) > 25) return false;   
+                return Math.abs(dU - X(62.5)) <= 38 && Math.abs(dV - 120) <= 38;
+            };
+            if (!fits(false) && !fits(true)) return false;
+
+            if (chim.length !== 3) return false;
+            const nb = chim.map((l, i) => chim.filter((m, j) => j !== i && endsOf(l).some(p => endsOf(m).some(q => nearH(p, q)))).length);
+            const mi = nb.indexOf(2);
+            if (mi < 0 || nb.filter(n => n === 1).length !== 2) return false;
+            const diag = chim[mi], dE = endsOf(diag);
+            const info = chim.filter((_, i) => i !== mi).map(v => {
+                const e = endsOf(v), i = dE.some(q => nearH(e[0], q)) ? 0 : 1;
+                return { v, J: e[i], F: e[1 - i] };
+            });
+            if (info.some(o => !isVert(o.v, 0.35) || o.J.y > o.F.y - 40)) return false;
+            if (Math.hypot(info[0].J.x - info[1].J.x, info[0].J.y - info[1].J.y) < 20) return false;
+            const ang = Math.atan2(Math.abs(diag.y2 - diag.y1), Math.abs(diag.x2 - diag.x1)) * 180 / Math.PI;
+            if (ang < 20 || ang > 70) return false;
+            if (!info.every(o => distToSeg(o.F, P, apex) <= 30 || distToSeg(o.F, Q, apex) <= 30)) return false;
+
+            return true;
+        }
+
+        function checkCar() {
+            if (lines.some(l => midOf(l).y > boardH - 160)) return false;
+            const TOL = 60;
+            const tpl = idealFigure(6).map(s => {
+                const t = { shape: s.k, color: s.color, len: Math.hypot(s.x2 - s.x1, s.y2 - s.y1),
+                            p: { x: s.x1, y: s.y1 }, q: { x: s.x2, y: s.y2 } };
+                if (s.k === 'curve') t.ap = arcApex({ shape: 'curve', x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2, customR: s.r, sweep: s.sweep });
+                if (s.k === 'window') t.ap = windowGeom(s).V;
+                return t;
+            });
+            if (tpl.length !== lines.length) return false;
+            const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+            const same = (l, t) => l.shape === t.shape && l.color === t.color && Math.abs(l.length - t.len) < 1.5;
+            const matchAll = off => {
+                const sh = p => ({ x: p.x + off.x, y: p.y + off.y });
+                const used = new Set();
+                for (const t of tpl) {
+                    const p = sh(t.p), q = sh(t.q);
+                    let best = -1, bd = Infinity;
+                    lines.forEach((l, i) => {
+                        if (used.has(i) || !same(l, t)) return;
+                        const [a, b] = endsOf(l);
+                        let d = Math.min(Math.max(dist(a, p), dist(b, q)), Math.max(dist(a, q), dist(b, p)));
+                        if (t.shape === 'curve') {
+                            const apL = arcApex(l);
+                            d = Math.max(d, dist(apL, sh(t.ap)));
+                            // напрямок вигину має збігатися з зразком
+                            const tv = { x: t.ap.x - (t.p.x + t.q.x) / 2, y: t.ap.y - (t.p.y + t.q.y) / 2 };
+                            const lv = { x: apL.x - (a.x + b.x) / 2, y: apL.y - (a.y + b.y) / 2 };
+                            if (tv.x * lv.x + tv.y * lv.y <= 0) d = Infinity;
+                        }
+                        if (t.shape === 'window') d = Math.max(d, dist(windowGeom(l).V, sh(t.ap)));
+                        if (d < bd) { bd = d; best = i; }
+                    });
+                    if (best < 0 || bd > TOL) return false;
+                    used.add(best);
+                }
+                return true;
+            };
+            const base = tpl[0];
+            return lines.some(l => {
+                if (!same(l, base)) return false;
+                const [a, b] = endsOf(l);
+                const left = a.x <= b.x ? a : b;
+                return matchAll({ x: left.x - base.p.x, y: left.y - base.p.y });
+            });
+        }
+
+        function resetCurrentLevel() {
+            delete progress[currentLevel];
+            initLevel(currentLevel, true);
+        }
+
+        function saveSandbox() {
+            const savedCont = document.getElementById('savedContainer');
+            const cloneSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            cloneSvg.setAttribute('viewBox', `0 0 ${boardW} ${boardH}`);
+            cloneSvg.style.width = '100%';
+            cloneSvg.style.minHeight = '180px';
+            cloneSvg.style.border = '2px dashed #ce93d8';
+            cloneSvg.style.borderRadius = '10px';
+            cloneSvg.style.background = 'white';
+            cloneSvg.style.flexShrink = '0';
+            
+            const invTop = boardH - 160; 
+            
+            lines.forEach(l => {
+                if ((l.y1 + l.y2) / 2 < invTop) { 
+                    if (l.shape === 'curve') {
+                        const r = l.customR ? l.customR : (l.length / 2);
+                        const ry = l.customRy ? l.customRy : r;
+                        const sweep = l.sweep !== undefined ? l.sweep : 1;
+                        const d = `M ${l.x1} ${l.y1} A ${r} ${ry} 0 0 ${sweep} ${l.x2} ${l.y2}`;
+                        cloneSvg.appendChild(createSVGElement('path', { d: d, stroke: l.color, 'stroke-width': 12, fill: 'none', 'stroke-linecap': 'round' }));
+                    } else if (l.shape === 'window') {
+                        const g = windowGeom(l);
+                        cloneSvg.appendChild(createSVGElement('path', { d: g.d, stroke: l.color, 'stroke-width': 12, fill: '#b3e5fc', 'stroke-linejoin': 'round' }));
+                    } else {
+                        cloneSvg.appendChild(createSVGElement('line', { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, stroke: l.color, 'stroke-width': 12, 'stroke-linecap': 'round' }));
+                    }
+                }
+            });
+            
+            if (cloneSvg.childNodes.length > 0) {
+                savedCont.prepend(cloneSvg);
+            }
+        }
+
+        function checkWinCondition() {
+            if (currentLevel === 8) return;
+            let isWin = false;
+            if (currentLevel === 1 || currentLevel === 2) isWin = checkPolygon();
+            else if (currentLevel === 3) isWin = checkSun();
+            else if (currentLevel === 4) isWin = checkLeaf();
+            else if (currentLevel === 5) isWin = checkFlower(); 
+            else if (currentLevel === 6) isWin = checkCar();
+            else if (currentLevel === 7) isWin = checkHouse();
+            if (isWin) triggerWin();
+        }
+ 
+        document.addEventListener('keydown', e => {
+            if (e.shiftKey && e.code === 'KeyR' && !e.repeat) {
+                if (currentLevel === 7 || currentLevel === 8) {
+                    document.getElementById('successModal').style.display = 'none';
+                    saveProgress();
+                    initLevel(8);
+                } else {
+                    forceWin();
+                }
+            }
+        });
+
+        function forceWin() {
+            triggerWin();
+        }
+
+        function triggerWin() {
+            if (levelDone) return;
+            levelDone = true;
+            saveProgress();
+            renderMenu();
+            showWin();
+        }
+
+        function showWin() {
+            const isLast = currentLevel >= 7;
+            document.getElementById('modalTitle').innerText = isLast ? "Гру завершено!" : "Супер! 🎉";
+            document.getElementById('modalDesc').innerText = isLast ? "Усе зібрано правильно. Скажи Юлії Ігорівні." : "Усе зібрано правильно!";
+            document.getElementById('nextBtn').style.display = isLast ? 'none' : '';
+            document.getElementById('successModal').style.display = 'flex';
+        }
+
+        function nextLevel() {
+            if (currentLevel >= levelsData.length) return;
+            saveProgress();
+            initLevel(currentLevel + 1);
+        }
+
+        window.onload = () => initLevel(1);
+    </script>
+</body>
+</html>
